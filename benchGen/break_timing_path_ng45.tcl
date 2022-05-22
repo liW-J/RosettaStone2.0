@@ -1,128 +1,30 @@
-proc get_loop_in_pins {} {
-  set loop_in_pins []
-  foreach edge [sta::disabled_edges_sorted] {
-    if { [$edge role] == "combinational"} {
-      if { [$edge is_disabled_loop] } {
-        set from_pin [[$edge from] pin]
-        lappend loop_in_pins $from_pin
-      } 
-    } 
-  }
-  return $loop_in_pins
-}
-
-proc get_ff {} {
-  set db [ord::get_db]
-  set block [[$db getChip] getBlock]
-
-  foreach inst [$block getInsts] {
-    set master [$inst getMaster]
-    if { [$master isSequential] } {
-      return $master
-      break
-    }
-  }
-}
-
-proc get_ff_name {} {
-  return [[get_ff] getName]
-}
-
-proc get_ff_dpin_name {} {
-  foreach mTerm [[get_ff] getMTerms] {
-    if {[$mTerm getSigType] == "SIGNAL"} {
-      if {[$mTerm getIoType] == "INPUT"} {
-        return [$mTerm getName] 
-      }
-    }
-  }
-  foreach mTerm [[get_ff] getMTerms] {
-    if {[regexp [$mTerm getName] "D|d"]} {
-      return [$mTerm getName]
-    } 
-  }
-}
-
-proc get_ff_qpin_name {} {
-  foreach mTerm [[get_ff] getMTerms] {
-    if {[$mTerm getSigType] == "SIGNAL"} {
-      if {[$mTerm getIoType] == "OUTPUT"} {
-        return [$mTerm getName] 
-      }
-    }
-  }
-  foreach mTerm [[get_ff] getMTerms] {
-    if {[regexp [$mTerm getName] "Q|q"]} {
-      return [$mTerm getName]
-    } 
-  }
-}
-
-proc get_ff_clkpin_name {} {
-  foreach mTerm [[get_ff] getMTerms] {
-    if {[$mTerm getSigType] == "CLOCK"} {
-      return [$mTerm getName] 
-    }
-  }
-
-  foreach mTerm [[get_ff] getMTerms] {
-    if {[regexp [$mTerm getName] "CK|CLK|ck|clk|CLOCK|clock"]} {
-      return [$mTerm getName]
-    } 
-  }
-}
-
-proc get_clk_net_name {} {
-  set db [ord::get_db]
-  set block [[$db getChip] getBlock]
-  
-  foreach net [$block getNets] {
-    if {[$net getSigType] == "CLOCK"} {
-      return [$net getName]
-    }
-  }
-}
-
-proc get_mterm_iopin_cnt {db_master} {
-  set ipin 0
-  set opin 0
-  foreach mterm [$db_master getMTerms] {
-    if {[$mterm getSigType] == "SIGNAL"} {
-      if {[$mterm getIoType] == "INPUT"} {
-        set ipin [expr $ipin+1]
-      } elseif {[$mterm getIoType] == "OUTPUT"} {
-        set opin [expr $opin+1]
-      }
-    }
-  }
-  # return [list $ipin $opin]
-  return "$ipin/$opin"
-}
-
-# note that the following two funcs are only for "1-in/1-out" inst.
-proc get_sta_inst_dir_pin {db_pin direction} {
-  set db_inst [$db_pin getInst]
-  foreach iterm [$db_inst getITerms] {
-    if {[$iterm getSigType] == "SIGNAL" && [$iterm getIoType] == $direction} {
-      set mterm_name [[$iterm getMTerm] getConstName]
-      set inst_name [$db_inst getConstName]
-      return [get_pins "$inst_name/$mterm_name"]
-    }
-  }
-  return NULL
-}
-
+source common_funcs.tcl
 set design adaptec1
 
+set libDir ""
 read_liberty $libDir/NangateOpenCellLibrary_typical.lib
+
 read_db ${design}.loop_break.db
 read_sdc ./gate/${design}.sdc
-# report_checks
-#
-set ff_name [get_ff_name]
-set ff_dpin [get_ff_dpin_name]
-set ff_qpin [get_ff_qpin_name]
-set ff_clkpin [get_ff_clkpin_name]
+
+# specify target FF
+set ff_name "DFF_X1"
+
+# tuning parameter for logic path cutting
+set max_timing_path_length 25
+
+# 1. ignore nets where fanout >= fanout_limit (100)
+# (Commercial tool's convention on prePlace timer)
+set fanout_limit 100
+set db [ord::get_db]
+
+disable_huge_fanout_nets $fanout_limit
+
+# 2. Setup FF pointers (both ODB, STA)
+set db_ff [get_ff $ff_name]
+set ff_dpin [get_ff_dpin_name $db_ff]
+set ff_qpin [get_ff_qpin_name $db_ff]
+set ff_clkpin [get_ff_clkpin_name $db_ff]
 set clk_net_name [get_clk_net_name]
 set lib_ff_cell [get_lib_cells $ff_name]
 
@@ -130,18 +32,20 @@ puts "ff_name: $ff_name"
 puts "ff_dpin: $ff_dpin, ff_qpin: $ff_qpin, ff_clkpin: $ff_clkpin"
 puts "clk_net_name: $clk_net_name"
 
-set db [ord::get_db]
-
-set max_timing_path_length 50
-set new_ff_cnt 0
-set timing_path_cnt 0
-
+# scale timing_path_length by 2 because Opin+Ipin pair awareness
 set max_timing_path_length [expr 2 * $max_timing_path_length]
 
+# loop vars
+set new_ff_cnt 0
+set timing_path_cnt 0
+set worst_length_same_cnt 0
+set prev_worst_length 0
+
+# 3. main logic cut script
 while {1} {
   set worst_length -1e30
 
-  foreach path_end [find_timing_paths -unique_paths_to_endpoint -group_count 50] {
+  foreach path_end [find_timing_paths -unique_paths_to_endpoint -group_count 10] {
     set accm_list []
     set pin_list []
     set cnt 1
@@ -230,7 +134,9 @@ while {1} {
             set accm_cell_cnt 0
             break
           # cut should happened here (found cut points)
-          } elseif {$next_is_cut || $next_accm_cell_cnt >= $max_timing_path_length || $end_i == [expr $accm_length-2]} {
+          } elseif {$next_is_cut \
+            || $next_accm_cell_cnt >= $max_timing_path_length \
+            || $end_i == [expr $accm_length-2]} {
             #set accm_cell_cnt 0
             break
           }
@@ -288,6 +194,21 @@ while {1} {
   if {$worst_length <= [expr $max_timing_path_length * 1.2]} {
     break
   } 
+
+  if {$prev_worst_length == $worst_length} {
+    incr worst_length_same_cnt 
+  } else {
+    set worst_length_same_cnt 0
+  }
+
+  # if length of timing critical path doesn't change  
+  # escape the while loop
+  if {$worst_length_same_cnt >= 5} { 
+    break
+  }
+
+  # update the prev_worst_length var
+  set prev_worst_length $worst_length
 }
 
 puts "finished"
