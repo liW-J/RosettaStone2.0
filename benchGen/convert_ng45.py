@@ -1,5 +1,5 @@
 from BookshelfToOdb import BookshelfToOdb
-import odbpy as odb
+import odb
 
 def PreProcessNanGate45(db, ffClkPinList):
   for lib in db.getLibs():
