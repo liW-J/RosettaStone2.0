@@ -1,4 +1,4 @@
-import odbpy as odb
+import odb
 from enum import Enum
 import random
 import math
