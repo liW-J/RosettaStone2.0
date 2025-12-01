@@ -6,13 +6,13 @@ def PreProcessNanGate45(db, ffClkPinList):
     for master in lib.getMasters():
       for mTerm in master.getMTerms():
         if mTerm.getName() in ffClkPinList:
-          master.setSequential(1)
+          master.setSequential(True)
           print("[INFO] Set %s as sequential masters" %(master.getName()))
           break
 
 db = odb.dbDatabase.create()
 
-lefDir = ""
+lefDir = "../../../flow/platforms/nangate45/lef"
 odb.read_lef(db, "%s/NangateOpenCellLibrary.tech.lef" % (lefDir))
 odb.read_lef(db, "%s/NangateOpenCellLibrary.macro.rect.lef" % (lefDir))
 
