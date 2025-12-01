@@ -3,6 +3,7 @@ from enum import Enum
 import random
 import math
 import copy
+import os
 
 def ErrorQuit(msg):
   print("ERROR: %s" %(msg))
@@ -189,7 +190,9 @@ class BookshelfToOdb:
       # minFFWidth = 20,
       targetFFRatio = 0.12,
       customFPRatio = 1.0):
-
+    
+    current_file_dir = os.path.dirname(os.path.abspath(__file__))
+    self.auxDir = os.path.normpath(os.path.join(current_file_dir, "..", "aux"))
     self.odbpy = opendbpy
     self.odb = opendb 
     self.auxName = auxName
@@ -225,7 +228,7 @@ class BookshelfToOdb:
     self.FillOdb()
     
   def ParseAux(self):
-    f = open(self.auxName, 'r')
+    f = open(os.path.join(self.auxDir,self.designName, self.auxName), 'r')
     cont = f.read()
     f.close()
 
@@ -282,7 +285,7 @@ class BookshelfToOdb:
     
   def ParseNodes(self, nodeName):
     print("Parsing %s ..." % (nodeName) )
-    f = open(nodeName, 'r')
+    f = open(os.path.join(self.auxDir, self.designName, nodeName), 'r')
     cont = f.read()
     f.close()
    
@@ -322,7 +325,7 @@ class BookshelfToOdb:
 
   def ParseNets(self, netName):
     print("Parsing %s ..." % (netName) )
-    f = open(netName, 'r')
+    f = open(os.path.join(self.auxDir, self.designName, netName), 'r')
     cont = f.read()
     f.close()
    
@@ -356,7 +359,7 @@ class BookshelfToOdb:
 
   def ParseShapes(self, shapeName):
     print("Parsing %s ..." % (shapeName) )
-    f = open(shapeName, 'r')
+    f = open(os.path.join(self.auxDir, self.designName, shapeName), 'r')
     cont = f.read()
     f.close()
    
@@ -387,7 +390,7 @@ class BookshelfToOdb:
 
   def ParseScl(self, sclName):
     print("Parsing %s ..." % (sclName) )
-    f = open(sclName, 'r')
+    f = open(os.path.join(self.auxDir, self.designName, sclName), 'r')
     cont = f.read()
     f.close()
    
@@ -419,7 +422,7 @@ class BookshelfToOdb:
 
   def ParsePl(self, plName):
     print("Parsing %s ..." % (plName) )
-    f = open(plName, 'r')
+    f = open(os.path.join(self.auxDir, self.designName, plName), 'r')
     cont = f.read()
     f.close()
    
@@ -478,7 +481,7 @@ class BookshelfToOdb:
 
     self.masters = []
     if mastersFileName != None: 
-      f = open(mastersFileName, 'r')
+      f = open(os.path.join(self.auxDir, "utils", mastersFileName), 'r')
       cont = f.read()
       f.close()
       
