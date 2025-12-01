@@ -1241,7 +1241,8 @@ class BookshelfToOdb:
     return newPins 
 
   def FillOdbMacroLef(self):
-    self.odbLib = self.odbpy.dbLib_create(self.odb, "fakeMacros")
+    # self.odbLib = self.odbpy.dbLib_create(self.odb, "fakeMacros")
+    self.odbLib = self.odbpy.dbLib_create(self.odb, "fakeMacros", self.odb.getTech())
     numCreatedMacros = 0
 
     widthSnapGrid = self.macroInstPinVerLayer.getPitchX() 
@@ -1444,7 +1445,7 @@ class BookshelfToOdb:
             dbITerm = curInst.RetrieveOdbInPin()
 
           # connect to net
-          self.odbpy.dbITerm_connect(dbITerm, dbNet)
+          dbITerm.connect(dbNet)
     print("Total %d nets are created in OpenDB" % (netCnt))
 
   def FillOdbClockNet(self):
@@ -1454,7 +1455,7 @@ class BookshelfToOdb:
 
       for ffInst in allFFInsts:
         dbITerm = ffInst.odbClkPin
-        self.odbpy.dbITerm_connect(dbITerm, dbNet)
+        dbITerm.connect(dbNet)
 
       dbBTerm = self.odbpy.dbBTerm_create(dbNet, self.clkNetName)
       dbBTerm.setIoType("INPUT")
