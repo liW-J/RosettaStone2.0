@@ -1,4 +1,5 @@
 from BookshelfToOdb import BookshelfToOdb
+from openroad import Design, Tech
 import odb
 
 def PreProcessNanGate45(db, ffClkPinList):
@@ -10,7 +11,7 @@ def PreProcessNanGate45(db, ffClkPinList):
           print("[INFO] Set %s as sequential masters" %(master.getName()))
           break
 
-db = odb.dbDatabase.create()
+db = Design.createDetachedDb()
 
 lefDir = "../../../flow/platforms/nangate45/lef"
 odb.read_lef(db, "%s/NangateOpenCellLibrary.tech.lef" % (lefDir))
@@ -18,7 +19,7 @@ odb.read_lef(db, "%s/NangateOpenCellLibrary.macro.rect.lef" % (lefDir))
 
 PreProcessNanGate45(db, ['CK'])
 
-design = "superblue18"
+design = "adaptec1"
 
 bs = BookshelfToOdb( opendbpy = odb, 
     opendb = db,

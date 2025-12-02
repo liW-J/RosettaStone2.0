@@ -1,3 +1,4 @@
+from openroad import Design
 import odb
 import os
 import datetime
@@ -123,8 +124,8 @@ class BookshelfToOdb:
 
     def UpdateOdb(self):
         dictNode = self.DecodeMap()
-        self.UpdatePl(dictNode)
-        os.path.exists
+        # self.UpdatePl(dictNode)
+        # os.path.exists
         dbName = './output/%s_pad%s_%s/%s_pad%s_%s_mapped.odb' % (
             odbName, cellPadding, modeFormat, odbName, cellPadding, modeFormat)
         defName = './output/%s_pad%s_%s/%s_mapped.def' % (
@@ -137,7 +138,7 @@ class BookshelfToOdb:
 
         odb.write_db(
             self.odb,
-            './%s_pad%s_%s/%s_pad%s_%s_mapped.odb' %
+            './output/%s_pad%s_%s/%s_pad%s_%s_mapped.odb' %
             (odbName,
              cellPadding,
              modeFormat,
@@ -146,7 +147,7 @@ class BookshelfToOdb:
              modeFormat))
         odb.write_def(
             self.block,
-            './%s_pad%s_%s/%s_mapped.def' %
+            './output/%s_pad%s_%s/%s_mapped.def' %
             (odbName,
              cellPadding,
              modeFormat,
@@ -166,7 +167,7 @@ if __name__ == "__main__":
 
     # OpenDB list for Bookshelf generation
     odbList = [
-        'sky130hd_ISPD2006_adaptec1',
+        'ng45_ISPD2005_adaptec1',
     ]
     ###########################################
 
@@ -179,7 +180,7 @@ if __name__ == "__main__":
                     odbName, cellPadding, modeFormat, odbName, cellPadding, modeFormat)
                 netMapFile = './output/%s_pad%s_%s/%s_pad%s_%s_mapped.netmap' % (
                     odbName, cellPadding, modeFormat, odbName, cellPadding, modeFormat)
-                db = odb.dbDatabase.create()
+                db = Design.createDetachedDb()
                 print(odb)
                 odb.read_db(db, '%s/%s.odb' % (odbPath, odbName))
                 bs = BookshelfToOdb(
