@@ -1,3 +1,11 @@
 aux/*
 !aux/utils/
 .DS_Store
+.def
+odbComm/output/*
+odbComm/odbFiles/*
+odbComm/*.def
+benchGen/*.def
+benchGen/*.db
+benchGen/*.lef
+__pycache__

@@ -3,6 +3,7 @@ import os
 import datetime
 import math
 from math import gcd
+import namemap
 
 
 class OdbToBookshelf:
@@ -819,7 +820,7 @@ if __name__ == "__main__":
     modeFormats = ['ISPD04', 'ISPD11']
 
     odbList = [
-        'sky130hd_ISPD2006_adaptec1',
+        'ng45_ISPD2005_adaptec1',
     ]
 
     # Layer capacity adjustment tcl file for global routing
