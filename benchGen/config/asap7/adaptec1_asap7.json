@@ -1,0 +1,24 @@
+{
+  "design": "adaptec1",
+  "benchmarks": "ispd2005",
+  "platform": "asap7",
+  "orfs_dir": "../../flow/",
+  "pdk": {
+    "name": "asap7",
+    "lef_dir": "asap7/lef",
+    "lef_files": [
+      "asap7_tech_1x_201209.lef",
+      "asap7sc7p5t_28_L_1x_220121a.lef",
+      "asap7sc7p5t_28_R_1x_220121a.lef",
+      "asap7sc7p5t_28_SL_1x_220121a.lef",
+      "asap7sc7p5t_28_SRAM_1x_220121a.lef"
+    ],
+    "site_name": "asap7sc7p5t",
+    "macro_inst_obs_layer": ["M1", "V1", "M2", "V2"],
+    "macro_inst_pin_layer": ["M3", "M4"],
+    "primary_layer": "M3",
+    "masters_file_name": "cellList_asap7.txt",
+    "ff_clk_pin_list": ["CLK"],
+    "custom_fp_ratio": 2.0
+  }
+}

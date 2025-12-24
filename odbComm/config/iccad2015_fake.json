@@ -1,0 +1,12 @@
+{
+  "platform": "fake",
+  "contest": "iccad2015",
+  "orfs_dir": "/home/openroad/ORFS-Research",
+  "bench_dir": "/home/openroad/ORFS-Research/tools/RosettaStone2.0/bench/fake",
+  "output_dir": "odbFiles",
+  "designs": ["superblue1"],
+  "lef_files": [
+    "{bench_dir}/{platform}_{contest}_{design}/{design}.lef"
+  ],
+  "def_file": "{bench_dir}/{platform}_{contest}_{design}/{design}.def"
+}

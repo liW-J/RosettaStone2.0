@@ -6,50 +6,36 @@ import os
 
 ################ Settings #################
 # Platform for ODB generation
-platform = 'ng45'
+platform = 'fake'
 # Contest name
-contest = 'ispd2005'
+contest = 'iccad2015'
 # OpenROAD-flow-scripts path
 orfs_path = '../../../../ORFS-Research'
 ## Benchmark path (for DEF)
 bench_path = '../bench'
 
-design_list = ['adaptec1']
+design_list = ['superblue1']
 
 ###########################################
 
 for design in design_list:
 
     lef_list = [
-        '%s/flow/platforms/nangate45/lef/NangateOpenCellLibrary.tech.lef' % orfs_path,
-        '%s/flow/platforms/nangate45/lef/NangateOpenCellLibrary.macro.rect.lef' %
-        orfs_path,
-        '%s/flow/platforms/nangate45/lef/NangateOpenCellLibrary.macro.mod.lef' % orfs_path,
-        '%s/%s/%s_%s/%s_macro.lef' %
-        (bench_path, platform, contest, design, design),
+        '/home/openroad/ORFS-Research/tools/RosettaStone2.0/bench/fake/iccad2015_superblue1/superblue1.lef',
     ]
     
-    # lefDir = "%s/flow/platforms/asap7/lef" % (orfs_path)
 
-    # lef_list = [
-    #     '%s/asap7_tech_1x_201209.lef' % (lefDir),
-    #     '%s/asap7sc7p5t_28_L_1x_220121a.lef' % (lefDir),
-    #     '%s/asap7sc7p5t_28_R_1x_220121a.lef' % (lefDir),
-    #     '%s/asap7sc7p5t_28_SL_1x_220121a.lef' % (lefDir),
-    #     '%s/asap7sc7p5t_28_SRAM_1x_220121a.lef' % (lefDir),
-    #     '%s/%s/%s_%s/%s_macro.lef' %
-    #     (bench_path, platform, contest, design, design),
-    # ]
-    
 
-    def_file = "%s/%s/%s_%s/%s.def" % (bench_path, platform, contest, design,
-                                       design)
+    def_file = "/home/openroad/ORFS-Research/tools/RosettaStone2.0/bench/fake/iccad2015_superblue1/superblue1.def" 
+    # def_v_file = "/home/openroad/ORFS-Research/tools/RosettaStone2.0/bench/fake/iccad2015_superblue1/superblue1.v.def"
+                                   
     # db = odb.dbDatabase.create()
     db = Design.createDetachedDb()
 
     for lef_file in lef_list:
         odb.read_lef(db, "%s" % lef_file)
     odb.read_def(db.getTech(), "%s" % (def_file))
+    # odb.read_def(db.getTech(), "%s" % (def_file))
     chip = db.getChip()
     tech = db.getTech()
     libs = db.getLibs()

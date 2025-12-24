@@ -9,3 +9,6 @@ benchGen/*.def
 benchGen/*.db
 benchGen/*.lef
 __pycache__
+bench/
+odbFiles/
+odbComm/*.def.*

@@ -816,11 +816,11 @@ if __name__ == "__main__":
     odbPath = './odbFiles/'
 
     # The number of sites for cell padding (+left, +right)
-    cellPaddings = [0, 1, 2, 3, 4]
-    modeFormats = ['ISPD04', 'ISPD11']
+    cellPaddings = [0]
+    modeFormats = ['ICCAD2015']
 
     odbList = [
-        'ng45_ISPD2005_adaptec1',
+        'fake_iccad2015_superblue1',
     ]
 
     # Layer capacity adjustment tcl file for global routing

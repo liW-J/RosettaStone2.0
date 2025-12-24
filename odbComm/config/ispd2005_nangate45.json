@@ -1,0 +1,15 @@
+{
+  "platform": "nangate45",
+  "contest": "ispd2005",
+  "orfs_dir": "../../../ORFS-Research",
+  "bench_dir": "bench",
+  "output_dir": "odbFiles",
+  "designs": ["adaptec1","adaptec2","adaptec3","adaptec4","bigblue1","bigblue2","bigblue3","bigblue4"],
+  "lef_files": [
+    "{orfs_dir}/flow/platforms/nangate45/lef/NangateOpenCellLibrary.tech.lef",
+    "{orfs_dir}/flow/platforms/nangate45/lef/NangateOpenCellLibrary.macro.rect.lef",
+    "{orfs_dir}/flow/platforms/nangate45/lef/NangateOpenCellLibrary.macro.mod.lef",
+    "{bench_dir}/{platform}/{contest}_{design}/{design}_macro.lef"
+  ],
+  "def_file": "{bench_dir}/{platform}/{contest}_{design}/{design}.def"
+}

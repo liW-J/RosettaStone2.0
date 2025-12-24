@@ -1,0 +1,21 @@
+{
+  "design": "adaptec4",
+  "benchmarks": "ispd2005",
+  "platform": "nangate45",
+  "orfs_dir": "../../flow/",
+  "pdk": {
+    "name": "nangate45",
+    "lef_dir": "nangate45/lef",
+    "lef_files": [
+      "NangateOpenCellLibrary.tech.lef",
+      "NangateOpenCellLibrary.macro.rect.lef"
+    ],
+    "site_name": "FreePDK45_38x28_10R_NP_162NW_34O",
+    "macro_inst_obs_layer": ["metal1", "via1", "metal2", "via2"],
+    "macro_inst_pin_layer": ["metal3", "metal4"],
+    "primary_layer": "metal3",
+    "masters_file_name": "cellList_ng45.txt",
+    "ff_clk_pin_list": ["CK"],
+    "custom_fp_ratio": 2
+  }
+}

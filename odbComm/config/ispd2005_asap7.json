@@ -1,0 +1,17 @@
+{
+  "platform": "asap7",
+  "contest": "ispd2005",
+  "orfs_dir": "../../../ORFS-Research",
+  "bench_dir": "bench",
+  "output_dir": "odbFiles",
+  "designs": ["adaptec1", "adaptec2", "adaptec3", "adaptec4", "bigblue1", "bigblue2", "bigblue3", "bigblue4"],
+  "lef_files": [
+    "{orfs_dir}/flow/platforms/asap7/lef/asap7_tech_1x_201209.lef",
+    "{orfs_dir}/flow/platforms/asap7/lef/asap7sc7p5t_28_L_1x_220121a.lef",
+    "{orfs_dir}/flow/platforms/asap7/lef/asap7sc7p5t_28_R_1x_220121a.lef",
+    "{orfs_dir}/flow/platforms/asap7/lef/asap7sc7p5t_28_SL_1x_220121a.lef",
+    "{orfs_dir}/flow/platforms/asap7/lef/asap7sc7p5t_28_SRAM_1x_220121a.lef",
+    "{bench_dir}/{platform}/{contest}_{design}/{design}_macro.lef"
+  ],
+  "def_file": "{bench_dir}/{platform}/{contest}_{design}/{design}.def"
+}
