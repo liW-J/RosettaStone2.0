@@ -19,6 +19,6 @@
     "primary_layer": "M3",
     "masters_file_name": "cellList_asap7.txt",
     "ff_clk_pin_list": ["CLK"],
-    "custom_fp_ratio": 2.0
+    "custom_fp_ratio": 6.0
   }
 }

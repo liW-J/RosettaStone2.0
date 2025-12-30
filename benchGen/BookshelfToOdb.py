@@ -58,6 +58,9 @@ class Instance:
         # odbClkPin will be used to create clk net
         self.odbClkPin = None
 
+        # mark if this instance should be converted to PIN (for boundary macros)
+        self.convertToPin = False
+
     def SetLxLy(self, lx, ly):
         self.lx = lx
         self.ly = ly
@@ -1450,12 +1453,14 @@ class BookshelfToOdb:
                     self.odbLib, "fake_macro_%s_%s" %
                     (self.designName, macroInst.name.replace("/", "_")))
 
-                if macroInst.lx * self.bsDbuRatio <= self.dbuLx or macroInst.ly * self.bsDbuRatio <= self.dbuLy or (
+                if macroInst.lx * self.bsDbuRatio < self.dbuLx or macroInst.ly * self.bsDbuRatio < self.dbuLy or (
                         macroInst.lx +
-                        macroInst.width) * self.bsDbuRatio >= self.dbuUx or (
+                        macroInst.width) * self.bsDbuRatio > self.dbuUx or (
                             macroInst.ly +
-                            macroInst.height) * self.bsDbuRatio >= self.dbuUy:
-                    odbMaster.setType("PAD")
+                            macroInst.height) * self.bsDbuRatio > self.dbuUy:
+                    # Mark this instance to be converted to PIN instead of PAD
+                    macroInst.convertToPin = True
+                    odbMaster.setType("BLOCK")  # Keep as BLOCK for now, will create PIN later
                 else:
                     odbMaster.setType("BLOCK")
 
@@ -1573,21 +1578,99 @@ class BookshelfToOdb:
         for fixedInst in self.fixedInsts:
             # only for macros
             if self.IsMacro(fixedInst.height):
-                odbInst = self.odbpy.dbInst_create(self.odbBlock,
-                                                   fixedInst.odbMaster,
-                                                   fixedInst.name)
-                odbInst.setOrigin(
-                    self.GetSnapCoordi(
-                        widthSnapGrid,
-                        int(round(self.bsDbuRatio * fixedInst.lx))) +
-                    self.macroInstVerLayerOffset,
-                    self.GetSnapCoordi(
-                        heightSnapGrid,
-                        int(round(self.bsDbuRatio * fixedInst.ly))) +
-                    self.macroInstHorLayerOffset)
+                # Check if this instance should be converted to PIN
+                if fixedInst.convertToPin:
+                    # Convert to PIN instead of creating INST
+                    self.ConvertMacroToPins(fixedInst, widthSnapGrid, heightSnapGrid)
+                else:
+                    odbInst = self.odbpy.dbInst_create(self.odbBlock,
+                                                       fixedInst.odbMaster,
+                                                       fixedInst.name)
+                    odbInst.setOrigin(
+                        self.GetSnapCoordi(
+                            widthSnapGrid,
+                            int(round(self.bsDbuRatio * fixedInst.lx))) +
+                        self.macroInstVerLayerOffset,
+                        self.GetSnapCoordi(
+                            heightSnapGrid,
+                            int(round(self.bsDbuRatio * fixedInst.ly))) +
+                        self.macroInstHorLayerOffset)
 
-                odbInst.setPlacementStatus("LOCKED")
-                fixedInst.SetOdbInst(odbInst, ffClkPinList=None)
+                    odbInst.setPlacementStatus("LOCKED")
+                    fixedInst.SetOdbInst(odbInst, ffClkPinList=None)
+
+    def ConvertMacroToPins(self, macroInst, widthSnapGrid, heightSnapGrid):
+        """
+        Convert a boundary macro instance to PINs (BTerm/BPin) instead of INST.
+        Creates a PIN for each pin in the macro instance, preserving the location.
+        """
+        # Calculate the snapped position of the macro instance
+        snappedX = self.GetSnapCoordi(
+            widthSnapGrid,
+            int(round(self.bsDbuRatio * macroInst.lx))) + self.macroInstVerLayerOffset
+        snappedY = self.GetSnapCoordi(
+            heightSnapGrid,
+            int(round(self.bsDbuRatio * macroInst.ly))) + self.macroInstHorLayerOffset
+
+        # Get pin locations (already snapped in FillOdbMacroLef)
+        newPins = self.SnapFixedMacroPinLocations(macroInst.pins, macroInst.odbMaster)
+        pinWidth = self.macroInstPinLowerLayer.getWidth()
+
+        # Create a temporary net for each pin (will be connected later in FillOdbNets)
+        # Store the pin information for later net connection
+        # Format: {macroInstName: {pinIdx: (dbBTerm, pinDir, pinX, pinY, tempNetName)}}
+        # Also track pin usage counters: {macroInstName: {direction: [pinIdx1, pinIdx2, ...]}}
+        if not hasattr(self, 'macroPinNets'):
+            self.macroPinNets = {}  # {macroInstName: {pinIdx: (dbBTerm, pinDir, pinX, pinY, tempNetName)}}
+            self.macroPinUsage = {}  # {macroInstName: {direction: [pinIdx1, pinIdx2, ...]}}
+
+        if macroInst.name not in self.macroPinNets:
+            self.macroPinNets[macroInst.name] = {}
+            self.macroPinUsage[macroInst.name] = {'I': [], 'O': []}
+
+        # Create BTerm and BPin for each pin
+        for idx, curPin in enumerate(newPins):
+            pinDir = curPin[2]  # 'I', 'O', or other
+            pinDirStr = "INPUT" if pinDir == 'I' else "OUTPUT" if pinDir == 'O' else "INOUT"
+            
+            # Calculate absolute pin position (macro position + pin offset)
+            pinX = snappedX + curPin[0]
+            pinY = snappedY + curPin[1]
+
+            # Create a temporary net for this pin (net name will be macroInst.name_pinIdx)
+            tempNetName = "%s_pin%d" % (macroInst.name, idx)
+            dbNet = self.odbpy.dbNet_create(self.odbBlock, tempNetName)
+            
+            if dbNet == None:
+                print("[WARNING] Failed to create net %s for macro pin conversion" % tempNetName)
+                continue
+
+            # Create BTerm
+            dbBTerm = self.odbpy.dbBTerm_create(dbNet, tempNetName)
+            if dbBTerm != None:
+                dbBTerm.setIoType(pinDirStr)
+                
+                # Create BPin
+                dbBPin = self.odbpy.dbBPin_create(dbBTerm)
+                
+                # Create pin shape at the calculated position
+                self.odbpy.dbBox_create(
+                    dbBPin, self.macroInstPinLowerLayer,
+                    int(self.GetGridCoordi(round(pinX - pinWidth / 2.0))),
+                    int(self.GetGridCoordi(round(pinY - pinWidth / 2.0))),
+                    int(self.GetGridCoordi(round(pinX + pinWidth / 2.0))),
+                    int(self.GetGridCoordi(round(pinY + pinWidth / 2.0))))
+                
+                dbBPin.setPlacementStatus("LOCKED")
+                
+                # Store for later net connection
+                self.macroPinNets[macroInst.name][idx] = (dbBTerm, pinDir, pinX, pinY, tempNetName)
+                # Track pin indices by direction for easier matching
+                if pinDir in self.macroPinUsage[macroInst.name]:
+                    self.macroPinUsage[macroInst.name][pinDir].append(idx)
+                
+                print("[INFO] Converted macro %s pin %d (dir=%s) to PIN at (%d, %d)" % 
+                      (macroInst.name, idx, pinDir, pinX, pinY))
 
     def FillOdbMovableMacroInsts(self):
         widthSnapGrid = self.macroInstPinVerLayer.getPitchX()
@@ -1622,12 +1705,40 @@ class BookshelfToOdb:
                 continue
 
             # Check if all pins are input or all pins are output
+            # Skip pins from non-feasible instances (skipInst)
             allInputs = True
             allOutputs = True
             for curPin in curNet[1]:
                 if len(curPin) < 2:
                     continue
+
+                iName = curPin[0]
                 iTermDir = curPin[1]
+
+                # Skip pins from non-feasible instances
+                if iName in self.typeDict:
+                    bsType = self.typeDict[iName]
+                    # Only check feasibility for instances (not PRIMARY)
+                    if bsType != BsType.PRIMARY:
+                        curInst = None
+                        # Get the instance object
+                        if bsType == BsType.MOVABLE_STD_INST:
+                            if iName in self.movableStdInstDict:
+                                curInst = self.movableStdInsts[
+                                    self.movableStdInstDict[iName]]
+                        elif bsType == BsType.MOVABLE_MACRO_INST:
+                            if iName in self.movableMacroInstDict:
+                                curInst = self.movableMacroInsts[
+                                    self.movableMacroInstDict[iName]]
+                        elif bsType == BsType.FIXED_INST:
+                            if iName in self.fixedInstDict:
+                                curInst = self.fixedInsts[
+                                    self.fixedInstDict[iName]]
+
+                        # Skip this pin if the instance is not feasible
+                        if curInst != None and curInst.IsFeasible() == False:
+                            continue
+
                 if iTermDir == "I":
                     allOutputs = False
                 elif iTermDir == "O":
@@ -1809,6 +1920,41 @@ class BookshelfToOdb:
                                 self.fixedInstDict[iName]]
 
                     if curInst == None:
+                        continue
+
+                    # Handle converted macro instances (convertToPin = True)
+                    if (bsType == BsType.FIXED_INST and 
+                        self.IsMacro(curInst.height) and 
+                        hasattr(curInst, 'convertToPin') and 
+                        curInst.convertToPin):
+                        # This is a converted macro PIN, find the corresponding BTerm
+                        if hasattr(self, 'macroPinNets') and iName in self.macroPinNets:
+                            # Find a matching pin by direction using usage tracking
+                            matchedBTerm = None
+                            if (hasattr(self, 'macroPinUsage') and 
+                                iName in self.macroPinUsage and 
+                                iTermDir in self.macroPinUsage[iName] and 
+                                len(self.macroPinUsage[iName][iTermDir]) > 0):
+                                # Get the first available pin index for this direction
+                                pinIdx = self.macroPinUsage[iName][iTermDir][0]
+                                if pinIdx in self.macroPinNets[iName]:
+                                    dbBTerm, pinDir, pinX, pinY, tempNetName = self.macroPinNets[iName][pinIdx]
+                                    # Check if this BTerm is already connected to a real net
+                                    existingNet = dbBTerm.getNet()
+                                    if existingNet == None or existingNet.getName() == tempNetName:
+                                        # This pin is available, connect it
+                                        matchedBTerm = dbBTerm
+                                        # Disconnect from temp net if needed
+                                        if existingNet != None and existingNet.getName() == tempNetName:
+                                            dbBTerm.disconnect()
+                                        # Remove from usage list (mark as used)
+                                        self.macroPinUsage[iName][iTermDir].pop(0)
+                            
+                            if matchedBTerm != None:
+                                matchedBTerm.connect(dbNet)
+                            else:
+                                print("[WARNING] Cannot find matching PIN for macro %s with direction %s" % 
+                                      (iName, iTermDir))
                         continue
 
                     # skip for non-feasible standard cells.

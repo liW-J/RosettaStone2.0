@@ -16,6 +16,6 @@
     "primary_layer": "metal3",
     "masters_file_name": "cellList_ng45.txt",
     "ff_clk_pin_list": ["CK"],
-    "custom_fp_ratio": 2
+    "custom_fp_ratio": 2.2
   }
 }
